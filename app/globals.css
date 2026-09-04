@@ -1,0 +1,106 @@
+@import "tailwindcss";
+
+:root {
+  --cloud: #f7f7f8;
+  --mist: #eef1f4;
+  --sheet: #ffffff;
+  --ink: #5b6570;
+  --ink-strong: #3d4550;
+  --rule: #d5dbe2;
+  --mint: #7ec8b8;
+  --rose: #d9a7b8;
+  --violet: #8b7bb8;
+  --mint-soft: #cdefe6;
+  --rose-soft: #ffd6e6;
+  --violet-soft: #d9d1ff;
+  --fringe: linear-gradient(90deg, #7ec8b8 0%, #d9a7b8 48%, #8b7bb8 100%);
+  --radius: 18px;
+  --radius-pill: 999px;
+}
+
+@theme inline {
+  --color-cloud: var(--cloud);
+  --color-mist: var(--mist);
+  --color-sheet: var(--sheet);
+  --color-ink: var(--ink);
+  --color-ink-strong: var(--ink-strong);
+  --color-rule: var(--rule);
+  --color-mint: var(--mint);
+  --color-rose: var(--rose);
+  --color-violet: var(--violet);
+  --font-sans: var(--font-noto), var(--font-source), ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body {
+  background: var(--cloud);
+  color: var(--ink);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--violet-soft) 70%, white);
+  color: var(--ink-strong);
+}
+
+:focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 3px;
+}
+
+textarea,
+input,
+select {
+  caret-color: var(--violet);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule) transparent;
+}
+
+.grain {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.fringe {
+  background: var(--fringe);
+}
+
+.sheet {
+  background: var(--sheet);
+  border: 1px solid color-mix(in srgb, var(--rule) 80%, white);
+  box-shadow: 0 18px 50px -28px color-mix(in srgb, var(--ink) 28%, transparent);
+}
+
+.diffract {
+  position: relative;
+}
+
+.diffract::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--fringe);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
