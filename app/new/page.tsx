@@ -7,6 +7,7 @@ import { FormingWait } from "@/components/forming-wait";
 import { extractTextFromFile } from "@/lib/parse-file";
 import { nextCaseName, saveReview } from "@/lib/storage";
 import type { ReviewReport } from "@/lib/types";
+import { reviewApiUrl } from "@/lib/urls";
 
 export default function NewReviewPage() {
   const router = useRouter();
@@ -49,7 +50,7 @@ export default function NewReviewPage() {
     setError("");
     setBusy("review");
     try {
-      const res = await fetch("/api/review", {
+      const res = await fetch(reviewApiUrl(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -72,7 +73,7 @@ export default function NewReviewPage() {
         createdAt: new Date().toISOString(),
         report: payload.report,
       });
-      router.push(`/review/${saved.id}`);
+      router.push(`/review?id=${saved.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "复盘失败。");
       setBusy(null);

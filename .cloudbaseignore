@@ -1,10 +1,9 @@
 node_modules
 .next
-out
+.git
 .env
 .env.local
 .DS_Store
 *.log
+.impeccable
 tsconfig.tsbuildinfo
-.api.bak
-.impeccable/config.local.json

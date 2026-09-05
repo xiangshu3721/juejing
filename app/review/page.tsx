@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 import { Disclaimer, PageShell, SiteHeader } from "@/components/chrome";
 import { hasField, hasMirror, hasPosition } from "@/lib/report";
 import { getReview } from "@/lib/storage";
@@ -56,12 +56,28 @@ function ClueList({ clues }: { clues: Clue[] }) {
 }
 
 export default function ReviewPage() {
-  const params = useParams<{ id: string }>();
+  return (
+    <Suspense
+      fallback={
+        <PageShell>
+          <SiteHeader />
+          <div className="mt-10 h-40 rounded-[18px] bg-mist/80" />
+        </PageShell>
+      }
+    >
+      <ReviewBody />
+    </Suspense>
+  );
+}
+
+function ReviewBody() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const [review, setReview] = useState<SavedReview | null | undefined>(undefined);
 
   useEffect(() => {
-    setReview(getReview(params.id));
-  }, [params.id]);
+    setReview(id ? getReview(id) : null);
+  }, [id]);
 
   if (review === undefined) {
     return (

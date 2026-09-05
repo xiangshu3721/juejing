@@ -61,7 +61,7 @@ export default function HomePage() {
             {reviews.map((item) => (
               <li key={item.id}>
                 <Link
-                  href={`/review/${item.id}`}
+                  href={`/review?id=${item.id}`}
                   className="group relative flex flex-col gap-1 py-5 no-underline sm:flex-row sm:items-baseline sm:justify-between"
                 >
                   <span className="absolute left-0 top-5 hidden h-[calc(100%-2.5rem)] w-px fringe opacity-0 transition group-hover:opacity-100 sm:block" />

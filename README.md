@@ -1,6 +1,8 @@
 # 觉镜 JueLens
 
-AI 个案复盘与专业成长助手。用户只访问本站，由服务器用 DeepSeek 生成报告。Key 不进浏览器。
+别人打开的是 GitHub Pages 页面。DeepSeek 仍由腾讯云上的接口调用，Key 不进浏览器。
+
+**给别人用的地址：** https://xiangshu3721.github.io/juejing/
 
 ## 本地
 
@@ -11,32 +13,17 @@ npm install
 npm run dev
 ```
 
-打开 http://localhost:3002 。`.env.local` 不会进 Git。
+打开 http://localhost:3002
 
-## 上线：共用一把 DeepSeek Key
+## 线上怎么分工
 
-线上所有人走同一把服务端 Key。在托管平台配置（不要加 `NEXT_PUBLIC_`）：
+| 部分 | 放哪 | 别人看到什么 |
+|---|---|---|
+| 页面 | GitHub Pages | `https://xiangshu3721.github.io/juejing/` |
+| 复盘接口 | 已有的腾讯云云托管 | 浏览器后台请求，没有风险提醒页 |
 
-- `DEEPSEEK_API_KEY`
-- `DEEPSEEK_BASE_URL=https://api.deepseek.com/v1`
-- `DEEPSEEK_MODEL=deepseek-chat`
-- `REVIEW_RATE_LIMIT_PER_HOUR=8`
+推送到 `main` 后，GitHub Actions 会自动更新 Pages。接口继续用已经配好 DeepSeek 的云托管。**改过接口的 CORS 之后，需要在云托管再发布一版**，否则 GitHub 页面调接口会被浏览器拦住。
 
-流程：用户提交会谈文字或 TXT/DOCX/PDF → 服务器请求 DeepSeek → 返回报告。个案内容只存在用户自己的浏览器里。
+云托管地址：
 
-## 国内访问怎么选托管
-
-没有 ICP 备案时，不要把站点放在内地机房。Vercel / Netlify 美西节点国内经常打不开。
-
-推荐：把仓库接到 [Zeabur](https://zeabur.com)，**地区选香港**。国内可访问，服务器也能直连 `api.deepseek.com`。
-
-也可以用 Docker 部署到腾讯云 / 阿里云的**香港轻量**：
-
-```bash
-docker build -t juelens .
-docker run -p 3000:3000 \
-  -e DEEPSEEK_API_KEY=你的密钥 \
-  -e DEEPSEEK_BASE_URL=https://api.deepseek.com/v1 \
-  -e DEEPSEEK_MODEL=deepseek-chat \
-  juelens
-```
+`https://juelens-308371-7-1304965105.sh.run.tcloudbase.com/api/review`
