@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { Disclaimer, PageShell, SiteHeader } from "@/components/chrome";
@@ -95,9 +96,9 @@ export default function NewReviewPage() {
     <PageShell>
       <SiteHeader
         action={
-          <a href="/" className="text-[14px] font-light text-ink no-underline">
+          <Link href="/" className="text-[14px] font-light text-ink no-underline">
             返回首页
-          </a>
+          </Link>
         }
       />
       <form onSubmit={onSubmit} className="mx-auto max-w-[760px] pb-8 pt-4">
