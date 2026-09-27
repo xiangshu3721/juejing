@@ -1,13 +1,31 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { Disclaimer, PageShell, SiteHeader } from "@/components/chrome";
 import { FormingWait } from "@/components/forming-wait";
 import { extractTextFromFile } from "@/lib/parse-file";
-import { nextCaseName, saveReview } from "@/lib/storage";
-import type { ReviewReport } from "@/lib/types";
+import { normalizeReport } from "@/lib/report";
+import { newReviewId, nextCaseName, saveReview } from "@/lib/storage";
 import { reviewApiUrl } from "@/lib/urls";
+
+function reviewFailureMessage(err: unknown) {
+  if (err instanceof DOMException && (err.name === "QuotaExceededError" || err.name === "SecurityError")) {
+    return "本机存储不可用";
+  }
+  if (
+    err instanceof DOMException &&
+    (err.name === "AbortError" || err.name === "TimeoutError")
+  ) {
+    return "网络连不上复盘服务";
+  }
+  if (err instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(err.message)) {
+    return "网络连不上复盘服务";
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return "服务返回异常";
+}
 
 export default function NewReviewPage() {
   const router = useRouter();
@@ -50,6 +68,10 @@ export default function NewReviewPage() {
     setError("");
     setBusy("review");
     try {
+      const signal =
+        typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+          ? AbortSignal.timeout(70_000)
+          : undefined;
       const res = await fetch(reviewApiUrl(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -59,23 +81,41 @@ export default function NewReviewPage() {
           transcript: body,
           focus: focus.trim(),
         }),
+        signal,
       });
-      const payload = (await res.json()) as { report?: ReviewReport; error?: string };
-      if (!res.ok || !payload.report) {
-        throw new Error(payload.error || "复盘失败，请稍后重试。");
+      const raw = await res.text();
+      let payload: { report?: unknown; error?: string };
+      try {
+        payload = raw ? (JSON.parse(raw) as { report?: unknown; error?: string }) : {};
+      } catch {
+        throw new Error("服务返回异常");
       }
-      const saved = saveReview({
-        id: crypto.randomUUID(),
-        caseName: name,
-        sessionNumber,
-        focus: focus.trim(),
-        transcript: body,
-        createdAt: new Date().toISOString(),
-        report: payload.report,
-      });
-      router.push(`/review?id=${saved.id}`);
+      if (!res.ok || payload.report == null) {
+        throw new Error(payload.error || "服务返回异常");
+      }
+      const report = normalizeReport(payload.report);
+      let saved;
+      try {
+        saved = saveReview({
+          id: newReviewId(),
+          caseName: name,
+          sessionNumber,
+          focus: focus.trim(),
+          transcript: body,
+          createdAt: new Date().toISOString(),
+          report,
+        });
+      } catch (err) {
+        // QuotaExceededError and private-mode SecurityError both land here.
+        if (err instanceof DOMException && err.name !== "QuotaExceededError" && err.name !== "SecurityError") {
+          throw err;
+        }
+        throw new Error("本机存储不可用");
+      }
+      // Pages export uses trailingSlash, so the query sits after the slash.
+      await router.push(`/review/?id=${encodeURIComponent(saved.id)}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "复盘失败。");
+      setError(reviewFailureMessage(err));
       setBusy(null);
     }
   }
@@ -95,9 +135,9 @@ export default function NewReviewPage() {
     <PageShell>
       <SiteHeader
         action={
-          <a href="/" className="text-[14px] font-light text-ink no-underline">
+          <Link href="/" className="text-[14px] font-light text-ink no-underline">
             返回首页
-          </a>
+          </Link>
         }
       />
       <form onSubmit={onSubmit} className="mx-auto max-w-[760px] pb-8 pt-4">

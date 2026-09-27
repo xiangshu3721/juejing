@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Disclaimer, PageShell, SiteHeader } from "@/components/chrome";
 import { listReviews } from "@/lib/storage";
 import type { SavedReview } from "@/lib/types";
+import { appHref } from "@/lib/urls";
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -36,13 +37,14 @@ export default function HomePage() {
           <li>还有什么值得继续探索</li>
           <li>下一次可以怎么做</li>
         </ul>
-        <Link
-          href="/new"
-          className="mt-10 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-ink-strong px-6 text-[15px] font-medium text-white transition active:scale-[0.98] sm:w-auto"
+        {/* Full document load. Soft RSC navigation to /new fails in some in-app browsers. */}
+        <a
+          href={appHref("/new")}
+          className="mt-10 inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-ink-strong px-6 text-[15px] font-medium text-white no-underline transition active:scale-[0.98] sm:w-auto"
         >
           <Plus size={18} weight="bold" />
           开始一次复盘
-        </Link>
+        </a>
       </section>
 
       <section className="mt-16 border-t border-rule/80 pt-8">
