@@ -9,9 +9,12 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 function withCors(response: NextResponse) {
+  // github.io Pages calls this Cross-Origin; * is enough (no credentials).
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
-  response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Accept");
+  // Cache successful preflights so flaky CloudBase cold starts hit OPTIONS less often.
+  response.headers.set("Access-Control-Max-Age", "86400");
   // Ask the browser to read the JSON. The live CloudBase gateway may still
   // overwrite this with attachment; that does not block fetch() in Chrome.
   response.headers.set("Content-Disposition", "inline");
