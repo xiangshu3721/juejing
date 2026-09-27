@@ -27,6 +27,36 @@ function reviewFailureMessage(err: unknown) {
   return "服务返回异常";
 }
 
+function isRetryableNetworkError(err: unknown) {
+  return (
+    err instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(err.message)
+  );
+}
+
+/** CloudBase OPTIONS/POST can flake; Chrome then surfaces it as CORS / Failed to fetch. */
+async function fetchReview(body: string, signal?: AbortSignal) {
+  const url = reviewApiUrl();
+  const maxAttempts = 3;
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+        signal,
+      });
+    } catch (err) {
+      lastError = err;
+      if (attempt >= maxAttempts || !isRetryableNetworkError(err) || signal?.aborted) {
+        throw err;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error("网络连不上复盘服务");
+}
+
 export default function NewReviewPage() {
   const router = useRouter();
   const [caseName, setCaseName] = useState("个案 001");
@@ -72,17 +102,15 @@ export default function NewReviewPage() {
         typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
           ? AbortSignal.timeout(70_000)
           : undefined;
-      const res = await fetch(reviewApiUrl(), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const res = await fetchReview(
+        JSON.stringify({
           caseName: name,
           sessionNumber,
           transcript: body,
           focus: focus.trim(),
         }),
         signal,
-      });
+      );
       const raw = await res.text();
       let payload: { report?: unknown; error?: string };
       try {
