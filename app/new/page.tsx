@@ -1,26 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { Disclaimer, PageShell, SiteHeader } from "@/components/chrome";
 import { FormingWait } from "@/components/forming-wait";
 import { extractTextFromFile } from "@/lib/parse-file";
 import { normalizeReport } from "@/lib/report";
 import { newReviewId, nextCaseName, saveReview } from "@/lib/storage";
-import { appHref, reviewApiUrl } from "@/lib/urls";
+import { reviewApiUrl } from "@/lib/urls";
 
 function reviewFailureMessage(err: unknown) {
-  if (err instanceof DOMException && (err.name === "AbortError" || err.name === "TimeoutError")) {
-    return "复盘时间过长，请稍后再试。";
+  if (err instanceof DOMException && (err.name === "QuotaExceededError" || err.name === "SecurityError")) {
+    return "本机存储不可用";
+  }
+  if (
+    err instanceof DOMException &&
+    (err.name === "AbortError" || err.name === "TimeoutError")
+  ) {
+    return "网络连不上复盘服务";
   }
   if (err instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(err.message)) {
-    return "无法连接复盘服务。请检查网络后再试。";
+    return "网络连不上复盘服务";
   }
   if (err instanceof Error && err.message) return err.message;
-  return "复盘失败。";
+  return "服务返回异常";
 }
 
 export default function NewReviewPage() {
+  const router = useRouter();
   const [caseName, setCaseName] = useState("个案 001");
   const [sessionNumber, setSessionNumber] = useState(1);
   const [transcript, setTranscript] = useState("");
@@ -80,14 +88,10 @@ export default function NewReviewPage() {
       try {
         payload = raw ? (JSON.parse(raw) as { report?: unknown; error?: string }) : {};
       } catch {
-        throw new Error(
-          res.ok
-            ? "复盘服务返回了无法识别的内容。请稍后再试。"
-            : `复盘服务暂时不可用（${res.status}）。请稍后再试。`,
-        );
+        throw new Error("服务返回异常");
       }
       if (!res.ok || payload.report == null) {
-        throw new Error(payload.error || "复盘失败，请稍后重试。");
+        throw new Error(payload.error || "服务返回异常");
       }
       const report = normalizeReport(payload.report);
       let saved;
@@ -101,11 +105,15 @@ export default function NewReviewPage() {
           createdAt: new Date().toISOString(),
           report,
         });
-      } catch {
-        throw new Error("复盘已经生成，但浏览器无法把它保存在本机。请关闭无痕模式或清理站点数据后再试。");
+      } catch (err) {
+        // QuotaExceededError and private-mode SecurityError both land here.
+        if (err instanceof DOMException && err.name !== "QuotaExceededError" && err.name !== "SecurityError") {
+          throw err;
+        }
+        throw new Error("本机存储不可用");
       }
-      // Full load. router.push stays on the wait screen when the static RSC fetch fails.
-      window.location.assign(appHref(`/review?id=${encodeURIComponent(saved.id)}`));
+      // Pages export uses trailingSlash, so the query sits after the slash.
+      await router.push(`/review/?id=${encodeURIComponent(saved.id)}`);
     } catch (err) {
       setError(reviewFailureMessage(err));
       setBusy(null);
