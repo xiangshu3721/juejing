@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { assetUrl } from "@/lib/urls";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -6,8 +7,8 @@ export const metadata: Metadata = {
   description: "AI 个案复盘与专业成长助手。看见来访者，也看见自己。",
   icons: {
     icon: [
-      { url: "/favicon.ico", sizes: "32x32" },
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: assetUrl("/favicon.ico"), sizes: "32x32" },
+      { url: assetUrl("/icon.svg"), type: "image/svg+xml" },
     ],
   },
 };
