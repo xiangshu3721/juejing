@@ -1,17 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { Disclaimer, PageShell, SiteHeader } from "@/components/chrome";
 import { FormingWait } from "@/components/forming-wait";
 import { extractTextFromFile } from "@/lib/parse-file";
-import { nextCaseName, saveReview } from "@/lib/storage";
-import type { ReviewReport } from "@/lib/types";
-import { reviewApiUrl } from "@/lib/urls";
+import { normalizeReport } from "@/lib/report";
+import { newReviewId, nextCaseName, saveReview } from "@/lib/storage";
+import { appHref, reviewApiUrl } from "@/lib/urls";
+
+function reviewFailureMessage(err: unknown) {
+  if (err instanceof DOMException && (err.name === "AbortError" || err.name === "TimeoutError")) {
+    return "复盘时间过长，请稍后再试。";
+  }
+  if (err instanceof TypeError && /failed to fetch|networkerror|load failed/i.test(err.message)) {
+    return "无法连接复盘服务。请检查网络后再试。";
+  }
+  if (err instanceof Error && err.message) return err.message;
+  return "复盘失败。";
+}
 
 export default function NewReviewPage() {
-  const router = useRouter();
   const [caseName, setCaseName] = useState("个案 001");
   const [sessionNumber, setSessionNumber] = useState(1);
   const [transcript, setTranscript] = useState("");
@@ -51,6 +60,10 @@ export default function NewReviewPage() {
     setError("");
     setBusy("review");
     try {
+      const signal =
+        typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+          ? AbortSignal.timeout(70_000)
+          : undefined;
       const res = await fetch(reviewApiUrl(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -60,23 +73,41 @@ export default function NewReviewPage() {
           transcript: body,
           focus: focus.trim(),
         }),
+        signal,
       });
-      const payload = (await res.json()) as { report?: ReviewReport; error?: string };
-      if (!res.ok || !payload.report) {
+      const raw = await res.text();
+      let payload: { report?: unknown; error?: string };
+      try {
+        payload = raw ? (JSON.parse(raw) as { report?: unknown; error?: string }) : {};
+      } catch {
+        throw new Error(
+          res.ok
+            ? "复盘服务返回了无法识别的内容。请稍后再试。"
+            : `复盘服务暂时不可用（${res.status}）。请稍后再试。`,
+        );
+      }
+      if (!res.ok || payload.report == null) {
         throw new Error(payload.error || "复盘失败，请稍后重试。");
       }
-      const saved = saveReview({
-        id: crypto.randomUUID(),
-        caseName: name,
-        sessionNumber,
-        focus: focus.trim(),
-        transcript: body,
-        createdAt: new Date().toISOString(),
-        report: payload.report,
-      });
-      router.push(`/review?id=${saved.id}`);
+      const report = normalizeReport(payload.report);
+      let saved;
+      try {
+        saved = saveReview({
+          id: newReviewId(),
+          caseName: name,
+          sessionNumber,
+          focus: focus.trim(),
+          transcript: body,
+          createdAt: new Date().toISOString(),
+          report,
+        });
+      } catch {
+        throw new Error("复盘已经生成，但浏览器无法把它保存在本机。请关闭无痕模式或清理站点数据后再试。");
+      }
+      // Full load. router.push stays on the wait screen when the static RSC fetch fails.
+      window.location.assign(appHref(`/review?id=${encodeURIComponent(saved.id)}`));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "复盘失败。");
+      setError(reviewFailureMessage(err));
       setBusy(null);
     }
   }

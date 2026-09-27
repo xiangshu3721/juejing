@@ -12,6 +12,9 @@ function withCors(response: NextResponse) {
   response.headers.set("Access-Control-Allow-Origin", "*");
   response.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   response.headers.set("Access-Control-Allow-Headers", "Content-Type");
+  // Ask the browser to read the JSON. The live CloudBase gateway may still
+  // overwrite this with attachment; that does not block fetch() in Chrome.
+  response.headers.set("Content-Disposition", "inline");
   return response;
 }
 

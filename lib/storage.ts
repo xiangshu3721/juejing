@@ -34,6 +34,13 @@ export function getReview(id: string): SavedReview | null {
   return listReviews().find((item) => item.id === id) ?? null;
 }
 
+export function newReviewId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `review-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export function saveReview(review: SavedReview): SavedReview {
   const all = listReviews().filter((item) => item.id !== review.id);
   all.unshift(review);
